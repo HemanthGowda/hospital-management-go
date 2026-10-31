@@ -1,0 +1,36 @@
+# Search doctors
+
+**Status:** Not built
+
+## Who this is for
+
+A signed-in person needs to find doctors without already knowing which record to open.
+
+## Requirement
+
+Anyone who is signed in can page through doctors and narrow the list by name.
+
+## Information
+
+Each entry in the list shows the same details as opening that doctor: full name, specialty, license number, and department.
+
+## Who may do this
+
+- Patient, doctor, and administrator: yes
+- Anyone who is not signed in: no
+
+## Rules
+
+- Results come back one page at a time. The reader can ask for a later page.
+- A page holds at most 20 doctors.
+- A name filter matches doctors whose full name contains the given text, ignoring letter case.
+- With no name filter, the page lists doctors in name order.
+- When nothing matches, the result is an empty page.
+- Searching does not change any doctor record.
+
+## Done when
+
+- A signed-in person can move through pages and see doctors in name order.
+- A name filter returns only doctors whose name contains that text, regardless of letter case.
+- An empty match is an empty page.
+- Anyone who is not signed in is refused.
