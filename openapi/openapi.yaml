@@ -1,0 +1,302 @@
+openapi: 3.0.3
+info:
+  title: Hospital Management API
+  version: 0.1.0
+  description: |
+    Half-baked hospital management backend for intern onboarding (Go + PostgreSQL).
+
+    Fully implemented reference slices:
+    - POST /api/v1/users — public patient registration
+    - POST /api/v1/auth/login — JWT login
+    - PUT /api/v1/patients/{id} — secured patient update (ADMIN, DOCTOR)
+
+    The Doctor resource is intentionally left unimplemented.
+  contact:
+    name: Hospital Engineering
+    email: engineering@hospital.local
+servers:
+  - url: http://localhost:8082
+tags:
+  - name: Users
+  - name: Authentication
+  - name: Patients
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        violations:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+    FieldViolation:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    RegisterUserRequest:
+      type: object
+      required: [email, password, fullName]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 120
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        fullName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [ADMIN, DOCTOR, PATIENT]
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresInMs:
+          type: integer
+          format: int64
+        userId:
+          type: string
+        email:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+    UpdatePatientRequest:
+      type: object
+      required: [fullName, primaryDoctorName, medicalRecordNumber, dateOfBirth, gender]
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 160
+        primaryDoctorName:
+          type: string
+          maxLength: 160
+          description: Free-text doctor name. A Doctor resource does not exist yet.
+        medicalRecordNumber:
+          type: string
+          description: Form MRN-100001. Stored uppercased.
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [FEMALE, MALE, OTHER, UNKNOWN]
+        phone:
+          type: string
+          maxLength: 20
+        bloodGroup:
+          type: string
+          enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+        notes:
+          type: string
+          maxLength: 2000
+    PatientResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        primaryDoctorName:
+          type: string
+        medicalRecordNumber:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          type: string
+        phone:
+          type: string
+        bloodGroup:
+          type: string
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+paths:
+  /api/v1/users:
+    post:
+      tags: [Users]
+      summary: Register a new patient
+      description: Public endpoint that creates a PATIENT account. Email must be unique.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterUserRequest"
+            example:
+              email: patient@example.com
+              password: PatientPass1
+              fullName: Ada Patient
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/v1/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login
+      description: Authenticate with email and password to receive a JWT access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              email: admin@hospital.local
+              password: ChangeMe123!
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/v1/patients/{id}:
+    put:
+      tags: [Patients]
+      summary: Update a patient
+      description: Fully replaces mutable patient fields. Requires ADMIN or DOCTOR role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientRequest"
+      responses:
+        "200":
+          description: Patient updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Medical record number conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
