@@ -3,8 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
-	"net/http"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/HemanthGowda/hospital-management-go/internal/auth"
@@ -18,7 +18,7 @@ import (
 )
 
 type Application struct {
-	Handler  http.Handler
+	App      *fiber.App
 	Pool     *pgxpool.Pool
 	Config   config.Config
 	users    user.Repository
@@ -65,7 +65,7 @@ func New(ctx context.Context, cfg config.Config) (*Application, error) {
 	}
 
 	return &Application{
-		Handler:  handler,
+		App:      handler,
 		Pool:     pool,
 		Config:   cfg,
 		users:    users,
