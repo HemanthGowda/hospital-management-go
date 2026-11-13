@@ -98,7 +98,7 @@ func TestRegisterRejectsInvalidPayload(t *testing.T) {
 	require.NotEmpty(t, body["violations"])
 }
 
-func TestRegisterDoctor(t *testing.T) {
+func TestRegisterValidDoctorSucceeds(t *testing.T) {
 	reset(t)
 	insertUser(t, "admin@hospital.local", "ChangeMe123!", "Hospital Admin", "ADMIN")
 
@@ -138,15 +138,19 @@ func TestLoginRejectsBadPassword(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, status)
 }
 
-func TestDoctorInsertion(t *testing.T){
+func TestRegisterDoctorForbidsDuplicateLisenceNumber(t *testing.T) {
 	reset(t)
-	insertDoctor(t,"Dr. Kamath","Dental specialist","Mysore","KMC123","Dental")
-	
+	insertUser(t, "admin@hospital.local", "ChangeMe123!", "Hospital Admin", "ADMIN")
+
+	token := login(t, "admin@hospital.local", "ChangeMe123!")
+	insertDoctor(t, "Dr. Singh", "Dental specialist", "Mysore", "KMC123", "Dental")
+	status, _ := request(t, http.MethodPost, "/api/v1/doctors", token, validDoctor())
+	require.Equal(t, http.StatusConflict, status)
 }
 
 func reset(t *testing.T) {
 	t.Helper()
-	_, err := application.Pool.Exec(context.Background(), `TRUNCATE TABLE patients, user_roles, users RESTART IDENTITY CASCADE`)
+	_, err := application.Pool.Exec(context.Background(), `TRUNCATE TABLE patients, doctors, user_roles, users RESTART IDENTITY CASCADE`)
 	require.NoError(t, err)
 }
 
@@ -164,16 +168,15 @@ func insertUser(t *testing.T, email, rawPassword, fullName, role string) {
 	require.NoError(t, err)
 }
 
-func insertDoctor(t *testing.T, name, speciality, address, license_number, department string) string {
+func insertDoctor(t *testing.T, name, speciality, address, license_number, department string) {
 	t.Helper()
 	id := uuid.NewString()
 	_, err := application.Pool.Exec(context.Background(), `
 		INSERT INTO doctors (
-			id, name, speciality, address, license_number, department, created_at, updated_at
+			id, fullname, speciality, address, licensenumber, department, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, '1800-04-05', '1999-06-07')
 	`, id, name, speciality, address, license_number, department)
 	require.NoError(t, err)
-	return id
 }
 
 func insertPatient(t *testing.T) string {
