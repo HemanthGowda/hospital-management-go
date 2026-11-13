@@ -118,7 +118,8 @@ components:
             type: string
     UpdatePatientRequest:
       type: object
-      required: [fullName, primaryDoctorName, medicalRecordNumber, dateOfBirth, gender]
+      required:
+        [fullName, primaryDoctorName, medicalRecordNumber, dateOfBirth, gender]
       properties:
         fullName:
           type: string
